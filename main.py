@@ -5,7 +5,7 @@ import re
 import random
 from Crypto.Cipher import Salsa20
 
-MY_IP = ""
+MY_IP = "127.0.0.1" # Address for hosting
 
 
 window = tkinter.Tk()
@@ -23,9 +23,9 @@ def on_close(event=None):  # Called when closed
 window.protocol("WM_DELETE_WINDOW", on_close)
 
 port = tkinter.StringVar()
-port.set("")
+port.set("port")
 address = tkinter.StringVar()
-address.set("")
+address.set("address")
 
 
 def chat(do_host, port, address=""):
@@ -142,8 +142,12 @@ def chat(do_host, port, address=""):
 
     if do_host:
         s.bind((MY_IP, port))
+        text_wait = tkinter.Label(window, text="Waiting for connection")
+        text_wait.place(relx=.5, rely=.5, anchor="center", width=150, height=100)
+        window.update()
         s.listen(1)
         conn, addr = s.accept()
+        text_wait.destroy()
         msg_list.insert(tkinter.END, f"Connected: {addr[0]}")
 
         P = generate_prime_number()
@@ -277,4 +281,4 @@ def menu():
 
 
 menu()
-tkinter.mainloop()
+window.mainloop()
