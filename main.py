@@ -4,6 +4,7 @@ from threading import Thread
 import tkinter
 import re
 
+MY_IP = ""
 
 socket.SO_REUSEADDR
 
@@ -32,7 +33,7 @@ port.set("")
 address = tkinter.StringVar()
 address.set("")
 
-def chat(do_connect, port, address="localhost"):
+def chat(do_connect, port, address=""):
     for child in window.winfo_children():
         child.destroy()
 
@@ -76,7 +77,8 @@ def chat(do_connect, port, address="localhost"):
         send = send_builder(s)
 
     else:
-        s.bind((address, port))
+        s.bind((MY_IP, port))
+        print(s.getsockname())
         s.listen(1)
         conn, addr = s.accept()
         msg_list.insert(tkinter.END, f"Connected: {addr[0]}")
