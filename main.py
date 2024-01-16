@@ -38,10 +38,14 @@ def chat(do_host, port, address=""):
 
     msg_box = tkinter.Frame(window)
     msg_scrollbar = tkinter.Scrollbar(msg_box)
-    msg_list = tkinter.Listbox(msg_box, yscrollcommand=msg_scrollbar.set)
+    msg_list = tkinter.Text(msg_box, wrap=tkinter.WORD, yscrollcommand=msg_scrollbar.set)
     msg_scrollbar.config(command=msg_list.yview)
     msg_value = tkinter.StringVar()
     msg_value.set("")
+    def msg_value_limit_size(*args):
+        if len(msg_value.get()) > 200:
+            msg_value.set(msg_value.get()[:-2])
+    msg_value.trace("w", msg_value_limit_size)
     msg_input_field = tkinter.Entry(window, textvariable=msg_value)
 
     conn = None
@@ -70,11 +74,11 @@ def chat(do_host, port, address=""):
                 except:
                     pass
                 if data:
-                    if data == "*Disconnect*":
+                    if data == b"*Disconnect*":
                         do_recv = False
                         disconnect()
                     else:
-                        msg_list.insert(tkinter.END, f"Received: {K.decrypt(data)}")
+                        msg_list.insert(tkinter.END, f"Received: {K.decrypt(data)}\n")
                         print("Received:", data)
             return
         return recv
@@ -83,7 +87,7 @@ def chat(do_host, port, address=""):
         def send(event=None):
             data = msg_value.get()
             if data:
-                msg_list.insert(tkinter.END, f"Sent: {data}")
+                msg_list.insert(tkinter.END, f"Sent: {data}\n")
                 c.send(K.encrypt(data))
                 msg_value.set("")
         return send
@@ -148,22 +152,22 @@ def chat(do_host, port, address=""):
         s.listen(1)
         conn, addr = s.accept()
         text_wait.destroy()
-        msg_list.insert(tkinter.END, f"Connected: {addr[0]}")
+        msg_list.insert(tkinter.END, f"Connected: {addr[0]}\n")
 
         P = generate_prime_number()
         conn.send(str(P).encode())
         G = int(conn.recv(1024).decode())
-        msg_list.insert(tkinter.END, f"p = {P}, g = {G}")
+        msg_list.insert(tkinter.END, f"p = {P}, g = {G}\n")
         K = DHKE(G, P)
         K.generate_privatekey()
-        msg_list.insert(tkinter.END, "Generated private key")
+        msg_list.insert(tkinter.END, "Generated private key\n")
         K.generate_publickey()
-        msg_list.insert(tkinter.END, f"Generated public key {K.pub_key}")
+        msg_list.insert(tkinter.END, f"Generated public key {K.pub_key}\n")
         other_public = int(conn.recv(1024).decode())
         conn.send(str(K.pub_key).encode())
-        msg_list.insert(tkinter.END, f"Received public key {other_public}")
+        msg_list.insert(tkinter.END, f"Received public key {other_public}\n")
         K.exchange_key(other_public)
-        msg_list.insert(tkinter.END, f"Generated shared key {K.share_key}")
+        msg_list.insert(tkinter.END, f"Generated shared key {K.share_key}\n")
 
         # Create thread for receiving
         recv_thread = Thread(target=recv_builder(conn), daemon=True)
@@ -171,27 +175,33 @@ def chat(do_host, port, address=""):
         send = send_builder(conn)
     else:
         s.connect((address, port))
-        msg_list.insert(tkinter.END, f"Connected to: {address}:{port}")
+        msg_list.insert(tkinter.END, f"Connected to: {address}:{port}\n")
 
         P = int(s.recv(1024).decode())
         G = generate_G(P)
         s.send(str(G).encode())
-        msg_list.insert(tkinter.END, f"p = {P}, g = {G}")
+        msg_list.insert(tkinter.END, f"p = {P}, g = {G}\n")
         K = DHKE(G, P)
         K.generate_privatekey()
-        msg_list.insert(tkinter.END, "Generated private key")
+        msg_list.insert(tkinter.END, "Generated private key\n")
         K.generate_publickey()
-        msg_list.insert(tkinter.END, f"Generated public key {K.pub_key}")
+        msg_list.insert(tkinter.END, f"Generated public key {K.pub_key}\n")
         s.send(str(K.pub_key).encode())
         other_public = int(s.recv(1024).decode())
-        msg_list.insert(tkinter.END, f"Received public key {other_public}")
+        msg_list.insert(tkinter.END, f"Received public key {other_public}\n")
         K.exchange_key(other_public)
-        msg_list.insert(tkinter.END, f"Generated shared key {K.share_key}")
+        msg_list.insert(tkinter.END, f"Generated shared key {K.share_key}\n")
 
         # Create thread for receiving
         recv_thread = Thread(target=recv_builder(s), daemon=True)
 
         send = send_builder(s)
+
+    def disconnect_and_close():
+        disconnect()
+        on_close()
+
+    window.protocol("WM_DELETE_WINDOW", disconnect_and_close)
 
 
     recv_thread.start()
@@ -268,6 +278,7 @@ def connect():
 
 
 def menu():
+    window.protocol("WM_DELETE_WINDOW", on_close)
     for child in window.winfo_children():
         child.destroy()
 
